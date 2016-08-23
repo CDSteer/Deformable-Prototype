@@ -1,0 +1,102 @@
+digitalWrite(DIR_PIN, LOW);
+delay(100);
+
+for (i = 0; i < 4000; i++) {      // Iterate for 4000 microsteps.
+  digitalWrite(STEP_PIN, LOW);  // This LOW to HIGH change is what creates the
+  digitalWrite(STEP_PIN, HIGH); // "Rising Edge" so the easydriver knows to when to step.
+  delayMicroseconds(500);      // This delay time is close to top speed for this
+}                              // particular motor. Any faster the motor stalls.
+
+digitalWrite(DIR_PIN, HIGH);    // Change direction.
+delay(100);
+
+for (i = 0; i<4000; i++) {     // Iterate for 4000 microsteps
+  digitalWrite(STEP_PIN, LOW);  // This LOW to HIGH change is what creates the
+  digitalWrite(STEP_PIN, HIGH); // "Rising Edge" so the easydriver knows to when to step.
+  delayMicroseconds(500);      // This delay time is close to top speed for this
+}                              // particular motor. Any faster the motor stalls.
+
+
+/*
+ ReadAnalogVoltage
+Reads an analog input on pin 0, converts it to voltage, and prints the result to the serial monitor.
+Attach the center pin of a potentiometer to pin A0, and the outside pins to +5V and ground.
+
+This example code is in the public domain.
+*/
+
+
+float voltage = 0;
+float LastVoltage = 0;
+float rate = 0;
+unsigned long lastTime = 0;
+unsigned long dt = 100; // dt in milliseconds
+
+void setup() {
+ Serial.begin(9600);
+}
+
+void loop() {
+ if (millis() - lastTime  >= dt) {  // wait for dt milliseconds
+   lastTime = millis();
+   int sensorValue = analogRead(A3);
+   voltage = sensorValue * (5.0 / 1023.0); // this line changed !!
+
+   Serial.print("SensorValue: ");
+   Serial.println(sensorValue);
+   Serial.print("Last voltage: ");
+   Serial.println(LastVoltage, 4);
+   Serial.print("Current voltage: ");
+   Serial.println(voltage, 4 );
+
+   dvdt = (V_now - V_a_moment_ago) / (T_now - T_a_moment_ago);
+
+   rate = (voltage-LastVoltage);
+   Serial.print("dV/dt: ");
+   Serial.println(1000*rate/dt, 4);
+   Serial.println();
+
+   LastVoltage = voltage;
+ }
+}
+
+
+//rotate a specific number of microsteps (8 microsteps per step)
+//a 200 step stepper would take 1600 micro steps for one full revolution
+rotate(1600, .5);
+delay(1000);
+
+rotate(-1600, .25); //reverse
+delay(1000);
+
+
+
+float speedRate(int v_dvdt){
+  if (millis() - lastTime  >= dt) {  // wait for dt milliseconds
+    speedLastTime = millis();
+
+    Serial.print("dvdt: ");
+    Serial.println(v_dvdt);
+    Serial.print("Last dvdt: ");
+    Serial.println(l_dvdt, 4);
+
+    motorSpeed = (v_dvdt - l_dvdt) / (millis() - speedLastTime);
+
+    Serial.print("motorSpeed: ");
+    Serial.println(motorSpeed);
+
+    l_dvdt = v_dvdt;
+  }
+}
+
+speedRate(dvdt);
+if (dvdt > 3){
+  speedRate(dvdt);
+  rotate(map(dvdt, -300, 300, 0, 720), map(float(analogRead(A3)), 10, 300, .3, 1));
+  voltageRate(analogRead(A3));
+}
+if (dvdt < -3){
+  speedRate(dvdt);
+  rotate(map(dvdt, -300, 300, -720, 0), map(float(analogRead(A3)), 10, 300, .3, 1));  //reverse
+  voltageRate(analogRead(A3));
+}
