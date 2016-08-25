@@ -84,9 +84,7 @@ void setup() {
 void loop () {
   readSerial();
   readForce();
-  //printForceValues();
-
-
+  printForceValues();
     // sqweezeDvdt[0] = voltageRate(sqweezeForce[0]);
 
     // if (analogRead(A3) > 10){
@@ -123,28 +121,28 @@ void loop () {
   pushDvdt[1] = voltageRate(analogRead(A9));
   pushDvdt[2] = voltageRate(pushForce[2]);
 
-  if (pushDvdt[0]>0){
-    //Serial.println(pushDvdt[0]);
-    readForceSet0();
-    printForceValues0();
-  } else if (pushDvdt[0] == 0) {
-    printForceValuesSet0();
-  }
-
-  if (pushDvdt[1]>0){
-    // Serial.println(pushDvdt[1]);
-    readForceSet1();
-    printForceValues1();
-  } else if (pushDvdt[1] == 0) {
-    printForceValuesSet1();
-  }
-
-  if (pushDvdt[2]>0){
-    readForceSet2();
-    printForceValues2();
-  } else if (pushDvdt[2] == 0) {
-    printForceValuesSet2();
-  }
+  // if (pushDvdt[0]>0){
+  //   //Serial.println(pushDvdt[0]);
+  //   readForceSet0();
+  //   printForceValues0();
+  // } else if (pushDvdt[0] == 0) {
+  //   printForceValuesSet0();
+  // }
+  //
+  // if (pushDvdt[1]>0){
+  //   // Serial.println(pushDvdt[1]);
+  //   readForceSet1();
+  //   printForceValues1();
+  // } else if (pushDvdt[1] == 0) {
+  //   printForceValuesSet1();
+  // }
+  //
+  // if (pushDvdt[2]>0){
+  //   readForceSet2();
+  //   printForceValues2();
+  // } else if (pushDvdt[2] == 0) {
+  //   printForceValuesSet2();
+  // }
 
 
   // Serial.println(pushDvdt[0]);
@@ -229,8 +227,6 @@ void printForceValues2(){
     Serial.print(",");
     Serial.println(sqweezeForce[2]);
 }
-
-
 
 void printForceValuesSet(){
   for (i = 0; i<3; i++){
