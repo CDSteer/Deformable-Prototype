@@ -100,3 +100,101 @@ if (dvdt < -3){
   rotate(map(dvdt, -300, 300, -720, 0), map(float(analogRead(A3)), 10, 300, .3, 1));  //reverse
   voltageRate(analogRead(A3));
 }
+
+
+
+
+sqweezeDvdt[0] = voltageRateSqweeze(0);
+sqweezeDvdt[1] = voltageRateSqweeze(1);
+sqweezeDvdt[2] = voltageRateSqweeze(2);
+
+//sqweeze values
+if (sqweezeDvdt[0] > 0){
+  Serial.println(sqweezeDvdt[0]);
+  sqweezeForceSet[0] = analogRead(A3);
+  printForceValuesS0();
+} else if (sqweezeDvdt[0] == 0) {
+  printForceValuesSetS0();
+}
+
+if (sqweezeDvdt[1] > 0){
+  Serial.println(sqweezeDvdt[1]);
+  sqweezeForceSet[1] = analogRead(A5);
+  printForceValuesS1();
+} else if (sqweezeDvdt[1] == 0) {
+  printForceValuesSetS1();
+}
+
+if (sqweezeDvdt[2] > 0){
+  sqweezeForceSet[2] = analogRead(A10);
+  printForceValuesS2();
+} else if (sqweezeDvdt[2] == 0) {
+  printForceValuesSetS2();
+}
+
+
+
+
+
+// Serial.println(pushDvdt[0]);
+// Serial.println(stop);
+//
+// if (pushDvdt[0] > 30 && revCount < 10){
+//   stop=false;
+//   if (revCount > 10){
+//     rotate(400, map(pushForce[0], 10, 300, .3, 1), e0_DIR_PIN, e0_STEP_PIN);
+//   } else {
+//     rotate(400, map(pushForce[0], 10, 300, .3, 1), e0_DIR_PIN, e0_STEP_PIN);
+//   }
+//   revCount++;
+// }
+// if (stop == true){
+//   if (revCount > 0 && pushDvdt[0] < 20 && pushDvdt[0] > 0) {
+//     if (revCount == 10){
+//       rotate(-400, map(pushForce[0], 10, 300, .3, 1), e0_DIR_PIN, e0_STEP_PIN);
+//     } else {
+//       rotate(-400, map(pushForce[0], 10, 300, .3, 1), e0_DIR_PIN, e0_STEP_PIN);
+//     }
+//     revCount--;
+//   }
+// }
+//
+// if (stop == false){
+//   if (pushDvdt[0] <= 0) {
+//     stop=true;
+//   }
+// }
+
+
+
+// sqweezeDvdt[0] = voltageRate(sqweezeForce[0]);
+
+// if (analogRead(A3) > 10){
+//   if (state != 2){
+//     // rotate(100, map(pushForce[0], 10, 300, .3, 1), e0_DIR_PIN, e0_STEP_PIN);
+//     count = count + 100;
+//     checkpos(count);
+//     readForce();
+//   }
+// } else if  (analogRead(A3) < 10) {
+//   if (state != 0){
+//     // rotate(-100, map(pushForce[0], 10, 300, .3, 1), e0_DIR_PIN, e0_STEP_PIN);
+//     if (count >= 100){
+//       count = count - 100;
+//     }
+//     checkpos(count);
+//     readForce();
+//   }
+// }
+
+// Serial.println(count);
+// Serial.println(state);
+
+// printForceValues();
+// if (pushDvdt[0]>0){
+//   Serial.println(pushDvdt[0]);
+//   readForceSet();
+//   printForceValues();
+// } else if (pushDvdt[0] == 0) {
+//   printForceValuesSet();
+// }

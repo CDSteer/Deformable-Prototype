@@ -1,3 +1,4 @@
+#include <AnalogSmooth.h>
 #define LED_PIN 13
 
 #define X_STEP_PIN 54
@@ -15,17 +16,23 @@
 #define e1_ENABLE_PIN 30
 
 int i, lastRead, force, motorSpeed;
-float l_SensorValue = 0;
+float l_SensorValue[3];
+float l_SensorValueS[3];
 float l_dvdt = 0;
-unsigned long lastTime = 0;
+unsigned long lastTime[3];
+unsigned long lastTimeS[3];
 unsigned long speedLastTime = 0;
 unsigned long dt = 100; // dt in milliseconds
-float dvdt = 0;
+
 float speed_dvdt = 0;
+
 float sqweezeDvdt[3];
 float pushDvdt[3];
+
 float sqweezeForce[3];
 float pushForce[3];
+float sqweezeForceCal[3];
+float pushForceCal[3];
 int revCount;
 int count;
 int curentPos = 1300;
@@ -40,22 +47,28 @@ int h2State = 1;
 int h3State = 1;
 
 float pushForceSet[3];
+float sqweezeForceSet[3];
+
+bool grasp = false;
 
 static const uint8_t analog_pins[] = {A3, A4, A5, A9, A10, A11};
 
+// Defaults to window size 10
+AnalogSmooth as0S = AnalogSmooth();
+AnalogSmooth as1S = AnalogSmooth();
+AnalogSmooth as2S = AnalogSmooth();
+
+AnalogSmooth as0P = AnalogSmooth();
+AnalogSmooth as1P = AnalogSmooth();
+AnalogSmooth as2P = AnalogSmooth();
+
+// Window size can range from 1 - 100
+AnalogSmooth as100 = AnalogSmooth(100);
+
+
+
 void setup() {
   Serial.begin(115200);
-
-  for (int i = 0; i < 6; i++) {
-    pinMode(analog_pins[i], INPUT);
-  }
-
-  pinMode(A3, INPUT);
-  pinMode(A4, INPUT);
-  pinMode(A5, INPUT);
-  pinMode(A9, INPUT);
-  pinMode(A10, INPUT);
-  pinMode(A11, INPUT);
 
   pinMode(e0_STEP_PIN, OUTPUT);
   pinMode(e0_DIR_PIN, OUTPUT);
@@ -73,133 +86,104 @@ void setup() {
   digitalWrite(e0_ENABLE_PIN, LOW);
   digitalWrite(e1_ENABLE_PIN, LOW);
 
+  pinMode(A3, INPUT);
+  pinMode(A4, INPUT);
+  pinMode(A5, INPUT);
+  pinMode(A9, INPUT);
+  pinMode(A10, INPUT);
+  pinMode(A11, INPUT);
+
   digitalWrite(A3, LOW);
   digitalWrite(A4, LOW);
   digitalWrite(A5, LOW);
   digitalWrite(A9, LOW);
   digitalWrite(A10, LOW);
   digitalWrite(A11, LOW);
+
+  unsigned long starttime = millis();
+  unsigned long endtime = starttime;
+  while ((endtime - starttime) <= 5000) {
+    readForce();
+    for (int i = 0; i < 10; i++) {
+      sqweezeForceCal[0] = as0S.smooth(analogRead(A3));
+      pushForceCal[0] = as0P.smooth(analogRead(A4));
+      sqweezeForceCal[1] = as1S.smooth(analogRead(A5));
+      pushForceCal[1] = as1P.smooth(analogRead(A9));
+      sqweezeForceCal[2] = as2S.smooth(analogRead(A10));
+      pushForceCal[2] = as2P.smooth(analogRead(A11));
+    }
+    endtime = millis();
+  }
+
 }
 
 void loop () {
   readSerial();
   readForce();
-  printForceValues();
-    // sqweezeDvdt[0] = voltageRate(sqweezeForce[0]);
+  if (state == 0){
+    readForce();
+    sqweezeDvdt[0] = voltageRateSqweeze(0);
+    if (sqweezeDvdt[0] > 1){
+      sqweezeForceSet[0] = as0S.smooth(analogRead(A3))-sqweezeForceCal[0];
+      printForceValuesS0();
+    } else if (sqweezeDvdt[0] < 0 ) {
+      printForceValuesSetS0();
+    }
+    sqweezeDvdt[1] = voltageRateSqweeze(1);
+    if (sqweezeDvdt[1] > 1){
+      sqweezeForceSet[1] = as1S.smooth(analogRead(A5))-sqweezeForceCal[1];
+      printForceValuesS1();
+    } else if (sqweezeDvdt[1] < 0) {
+      printForceValuesSetS1();
+    }
+    sqweezeDvdt[2] = voltageRateSqweeze(2);
+    if (sqweezeDvdt[2] > 1){
+      sqweezeForceSet[2] = as2S.smooth(analogRead(A10))-sqweezeForceCal[2];
+      printForceValuesS2();
+    } else if (sqweezeDvdt[2] < 0) {
+      printForceValuesSetS2();
+    }
+  }
 
-    // if (analogRead(A3) > 10){
-    //   if (state != 2){
-    //     // rotate(100, map(pushForce[0], 10, 300, .3, 1), e0_DIR_PIN, e0_STEP_PIN);
-    //     count = count + 100;
-    //     checkpos(count);
-    //     readForce();
-    //   }
-    // } else if  (analogRead(A3) < 10) {
-    //   if (state != 0){
-    //     // rotate(-100, map(pushForce[0], 10, 300, .3, 1), e0_DIR_PIN, e0_STEP_PIN);
-    //     if (count >= 100){
-    //       count = count - 100;
-    //     }
-    //     checkpos(count);
-    //     readForce();
-    //   }
-    // }
-
-    // Serial.println(count);
-    // Serial.println(state);
-
-  // printForceValues();
-  // if (pushDvdt[0]>0){
-  //   Serial.println(pushDvdt[0]);
-  //   readForceSet();
-  //   printForceValues();
-  // } else if (pushDvdt[0] == 0) {
-  //   printForceValuesSet();
-  // }
-
-  pushDvdt[0] = voltageRate(pushForce[0]);
-  pushDvdt[1] = voltageRate(analogRead(A9));
-  pushDvdt[2] = voltageRate(pushForce[2]);
-
-  // if (pushDvdt[0]>0){
-  //   //Serial.println(pushDvdt[0]);
-  //   readForceSet0();
-  //   printForceValues0();
-  // } else if (pushDvdt[0] == 0) {
-  //   printForceValuesSet0();
-  // }
-  //
-  // if (pushDvdt[1]>0){
-  //   // Serial.println(pushDvdt[1]);
-  //   readForceSet1();
-  //   printForceValues1();
-  // } else if (pushDvdt[1] == 0) {
-  //   printForceValuesSet1();
-  // }
-  //
-  // if (pushDvdt[2]>0){
-  //   readForceSet2();
-  //   printForceValues2();
-  // } else if (pushDvdt[2] == 0) {
-  //   printForceValuesSet2();
-  // }
-
-
-  // Serial.println(pushDvdt[0]);
-  // Serial.println(stop);
-  //
-  // if (pushDvdt[0] > 30 && revCount < 10){
-  //   stop=false;
-  //   if (revCount > 10){
-  //     rotate(400, map(pushForce[0], 10, 300, .3, 1), e0_DIR_PIN, e0_STEP_PIN);
-  //   } else {
-  //     rotate(400, map(pushForce[0], 10, 300, .3, 1), e0_DIR_PIN, e0_STEP_PIN);
-  //   }
-  //   revCount++;
-  // }
-  // if (stop == true){
-  //   if (revCount > 0 && pushDvdt[0] < 20 && pushDvdt[0] > 0) {
-  //     if (revCount == 10){
-  //       rotate(-400, map(pushForce[0], 10, 300, .3, 1), e0_DIR_PIN, e0_STEP_PIN);
-  //     } else {
-  //       rotate(-400, map(pushForce[0], 10, 300, .3, 1), e0_DIR_PIN, e0_STEP_PIN);
-  //     }
-  //     revCount--;
-  //   }
-  // }
-  //
-  // if (stop == false){
-  //   if (pushDvdt[0] <= 0) {
-  //     stop=true;
-  //   }
-  // }
-  delay(100);
-
-}
-
-void readForceSet0(){
-  pushForceSet[0] = analogRead(A4);
-}
-void readForceSet1(){
-  pushForceSet[1] = analogRead(A9);
-}
-void readForceSet2(){
-  pushForceSet[2] = analogRead(A11);
+  if (state == 2){
+    pushDvdt[0] = voltageRate(0);
+    if (pushDvdt[0] > 1){
+      pushForceSet[0] = as0P.smooth(analogRead(A4)-pushForceCal[0]);
+      printForceValues0();
+    } else if (pushDvdt[0] <= 0) {
+      printForceValuesSet0();
+    }
+    pushDvdt[1] = voltageRate(1);
+    if (pushDvdt[1] > 1){
+      pushForceSet[1] = as1P.smooth(analogRead(A9))-pushForceCal[1];
+      printForceValues1();
+    } else if (pushDvdt[1] <= 0) {
+      printForceValuesSet1();
+    }
+    pushDvdt[2] = voltageRate(2);
+    if (pushDvdt[2] > 1){
+      pushForceSet[2] = as2P.smooth(analogRead(A11))-pushForceCal[2];
+      printForceValues2();
+    } else if (pushDvdt[2] <= 0 ) {
+      printForceValuesSet2();
+    }
+  }
+  delay(500);
 }
 
 void readForce(){
-  sqweezeForce[0] = analogRead(A3);
-  pushForce[0] = analogRead(A4);
-  sqweezeForce[1] = analogRead(A5);
-  pushForce[1] = analogRead(A9);
-  sqweezeForce[2] = analogRead(A10);
-  pushForce[2] = analogRead(A11);
+  sqweezeForce[0] = as0S.smooth(analogRead(A3))-sqweezeForceCal[0];
+  pushForce[0] = as0P.smooth(analogRead(A4))-pushForceCal[0];
+  sqweezeForce[1] = as1S.smooth(analogRead(A5))-sqweezeForceCal[1];
+  pushForce[1] = as1P.smooth(analogRead(A9))-pushForceCal[1];
+  sqweezeForce[2] = as2S.smooth(analogRead(A10))-sqweezeForceCal[2];
+  pushForce[2] = as2P.smooth(analogRead(A11))-pushForceCal[2];
 }
 
 void readForceSet(){
-  pushForceSet[0] = analogRead(A4);
-  pushForceSet[1] = analogRead(A9);
-  pushForceSet[2] = analogRead(A11);
+  pushForceSet[0] = as0P.smooth(analogRead(A4));
+  pushForceSet[1] = as1P.smooth(analogRead(A9));
+  pushForceSet[2] = as2P.smooth(analogRead(A11));
 }
 
 void printForceValues0(){
@@ -208,7 +192,7 @@ void printForceValues0(){
   Serial.print(":");
   Serial.print(pushForce[0]);
   Serial.print(",");
-  Serial.println(sqweezeForce[0]);
+  Serial.println(sqweezeForceSet[0]);
 }
 
 void printForceValues1(){
@@ -217,13 +201,39 @@ void printForceValues1(){
     Serial.print(":");
     Serial.print(pushForce[1]);
     Serial.print(",");
-    Serial.println(sqweezeForce[1]);
+    Serial.println(sqweezeForceSet[1]);
 }
 void printForceValues2(){
     Serial.print("head");
     Serial.print(2);
     Serial.print(":");
     Serial.print(pushForce[2]);
+    Serial.print(",");
+    Serial.println(sqweezeForceSet[2]);
+}
+
+void printForceValuesS0(){
+  Serial.print("head");
+  Serial.print(0);
+  Serial.print(":");
+  Serial.print(pushForceSet[0]);
+  Serial.print(",");
+  Serial.println(sqweezeForce[0]);
+}
+
+void printForceValuesS1(){
+    Serial.print("head");
+    Serial.print(1);
+    Serial.print(":");
+    Serial.print(pushForceSet[1]);
+    Serial.print(",");
+    Serial.println(sqweezeForce[1]);
+}
+void printForceValuesS2(){
+    Serial.print("head");
+    Serial.print(2);
+    Serial.print(":");
+    Serial.print(pushForceSet[2]);
     Serial.print(",");
     Serial.println(sqweezeForce[2]);
 }
@@ -235,7 +245,7 @@ void printForceValuesSet(){
     Serial.print(":");
     Serial.print(pushForceSet[i]);
     Serial.print(",");
-    Serial.println(sqweezeForce[i]);
+    Serial.println(sqweezeForceSet[i]);
   }
 }
 
@@ -245,7 +255,7 @@ void printForceValuesSet0(){
   Serial.print(":");
   Serial.print(pushForceSet[0]);
   Serial.print(",");
-  Serial.println(sqweezeForce[0]);
+  Serial.println(sqweezeForceSet[0]);
 }
 
 void printForceValuesSet1(){
@@ -254,7 +264,7 @@ void printForceValuesSet1(){
     Serial.print(":");
     Serial.print(pushForceSet[1]);
     Serial.print(",");
-    Serial.println(sqweezeForce[1]);
+    Serial.println(sqweezeForceSet[1]);
 }
 void printForceValuesSet2(){
     Serial.print("head");
@@ -262,7 +272,33 @@ void printForceValuesSet2(){
     Serial.print(":");
     Serial.print(pushForceSet[2]);
     Serial.print(",");
-    Serial.println(sqweezeForce[2]);
+    Serial.println(sqweezeForceSet[2]);
+}
+
+void printForceValuesSetS0(){
+  Serial.print("head");
+  Serial.print(0);
+  Serial.print(":");
+  Serial.print(pushForce[0]);
+  Serial.print(",");
+  Serial.println(sqweezeForceSet[0]);
+}
+
+void printForceValuesSetS1(){
+    Serial.print("head");
+    Serial.print(1);
+    Serial.print(":");
+    Serial.print(pushForce[1]);
+    Serial.print(",");
+    Serial.println(sqweezeForceSet[1]);
+}
+void printForceValuesSetS2(){
+    Serial.print("head");
+    Serial.print(2);
+    Serial.print(":");
+    Serial.print(pushForce[2]);
+    Serial.print(",");
+    Serial.println(sqweezeForceSet[2]);
 }
 
 void printForceValues(){
@@ -414,23 +450,45 @@ void rotateDeg(float deg, float speed, int drivePin, int stepPin){
   }
 }
 
-float voltageRate(int v_SensorValue){
-  if (millis() - lastTime  >= dt) {  // wait for dt milliseconds
-    lastTime = millis();
+float voltageRateSqweeze(int v_SensorValue){
+  float dvdt = 0;
+  if (millis() - lastTimeS[v_SensorValue]  >= dt) {  // wait for dt milliseconds
+    lastTimeS[v_SensorValue] = millis();
 
     Serial.print("SensorValue: ");
-    Serial.println(v_SensorValue);
+    Serial.println(sqweezeForce[v_SensorValue]);
     Serial.print("Last voltage: ");
-    Serial.println(l_SensorValue, 4);
+    Serial.println(l_SensorValueS[v_SensorValue], 4);
 
-    dvdt = (v_SensorValue - l_SensorValue) / (millis() - lastTime);
-    l_SensorValue = v_SensorValue;
-    return dvdt;
-
-    Serial.print("dV/dt: ");
-    Serial.println(dvdt);
+    dvdt = (sqweezeForce[v_SensorValue] - l_SensorValueS[v_SensorValue]) / (millis() - sqweezeForce[v_SensorValue]);
+    l_SensorValueS[v_SensorValue] = sqweezeForce[v_SensorValue];
+    if (dvdt > 1){
+      Serial.print("dV/dt: ");
+      Serial.println(dvdt*100000);
+    }
+    return dvdt*100000;
   }
 }
+
+float voltageRate(int v_SensorValue){
+  float dvdt = 0;
+  if (millis() - lastTime[v_SensorValue]  >= dt) {  // wait for dt milliseconds
+    lastTime[v_SensorValue] = millis();
+    Serial.print("SV: ");
+    Serial.println(pushForce[v_SensorValue]);
+    Serial.print("LV: ");
+    Serial.println(l_SensorValue[v_SensorValue], 4);
+
+    dvdt = (pushForce[v_SensorValue] - l_SensorValue[v_SensorValue]) / (millis() - pushForce[v_SensorValue]);
+    l_SensorValue[v_SensorValue] = pushForce[v_SensorValue];
+    if (dvdt > 1){
+      Serial.print("dV/dt: ");
+      Serial.println(dvdt*100000);
+    }
+    return dvdt*100000;
+  }
+}
+
 
 float map(float value, float istart, float istop, float ostart, float ostop) {
   return ostart + (ostop - ostart) * ((value - istart) / (istop - istart));
