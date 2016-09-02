@@ -121,7 +121,6 @@ void loop () {
   readSerial();
   readForce();
   if (state == 0){
-    readForce();
     sqweezeDvdt[0] = voltageRateSqweeze(0);
     if (sqweezeDvdt[0] > 1){
       sqweezeForceSet[0] = as0S.smooth(analogRead(A3))-sqweezeForceCal[0];
@@ -168,7 +167,7 @@ void loop () {
       printForceValuesSet2();
     }
   }
-  delay(500);
+  delay(100);
 }
 
 void readForce(){
@@ -462,10 +461,10 @@ float voltageRateSqweeze(int v_SensorValue){
 
     dvdt = (sqweezeForce[v_SensorValue] - l_SensorValueS[v_SensorValue]) / (millis() - sqweezeForce[v_SensorValue]);
     l_SensorValueS[v_SensorValue] = sqweezeForce[v_SensorValue];
-    if (dvdt > 1){
-      Serial.print("dV/dt: ");
-      Serial.println(dvdt*100000);
-    }
+    // if (dvdt > 1){
+    //   Serial.print("dV/dt: ");
+    //   Serial.println(dvdt*100000);
+    // }
     return dvdt*100000;
   }
 }
@@ -481,15 +480,10 @@ float voltageRate(int v_SensorValue){
 
     dvdt = (pushForce[v_SensorValue] - l_SensorValue[v_SensorValue]) / (millis() - pushForce[v_SensorValue]);
     l_SensorValue[v_SensorValue] = pushForce[v_SensorValue];
-    if (dvdt > 1){
-      Serial.print("dV/dt: ");
-      Serial.println(dvdt*100000);
-    }
+    // if (dvdt > 1){
+    //   Serial.print("dV/dt: ");
+    //   Serial.println(dvdt*100000);
+    // }
     return dvdt*100000;
   }
-}
-
-
-float map(float value, float istart, float istop, float ostart, float ostop) {
-  return ostart + (ostop - ostart) * ((value - istart) / (istop - istart));
 }
