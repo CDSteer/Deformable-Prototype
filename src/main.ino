@@ -69,7 +69,6 @@ AnalogSmooth as100 = AnalogSmooth(100);
 
 void setup() {
   Serial.begin(115200);
-
   pinMode(e0_STEP_PIN, OUTPUT);
   pinMode(e0_DIR_PIN, OUTPUT);
   pinMode(e0_ENABLE_PIN, OUTPUT);
@@ -114,57 +113,70 @@ void setup() {
     }
     endtime = millis();
   }
-
 }
 
 void loop () {
   readSerial();
   readForce();
+  // printForceValues();
+
   if (state == 0){
     sqweezeDvdt[0] = voltageRateSqweeze(0);
-    if (sqweezeDvdt[0] > 1){
+    Serial.println(sqweezeDvdt[0]);
+    if (sqweezeDvdt[0] > 15){
       sqweezeForceSet[0] = as0S.smooth(analogRead(A3))-sqweezeForceCal[0];
+      sqweezeForceSet[1] = 0;
+      sqweezeForceSet[2] = 0;
       printForceValuesS0();
-    } else if (sqweezeDvdt[0] < 0 ) {
-      printForceValuesSetS0();
+    } else if (sqweezeDvdt[0] <= 4 ) {
+      printForceValuesSet();
     }
     sqweezeDvdt[1] = voltageRateSqweeze(1);
-    if (sqweezeDvdt[1] > 1){
+    Serial.println(sqweezeDvdt[1]);
+    if (sqweezeDvdt[1] > 15){
       sqweezeForceSet[1] = as1S.smooth(analogRead(A5))-sqweezeForceCal[1];
+      sqweezeForceSet[0] = 0;
+      sqweezeForceSet[2] = 0;
       printForceValuesS1();
-    } else if (sqweezeDvdt[1] < 0) {
-      printForceValuesSetS1();
+    } else if (sqweezeDvdt[1] <= 4) {
+      printForceValuesSet();
     }
     sqweezeDvdt[2] = voltageRateSqweeze(2);
-    if (sqweezeDvdt[2] > 1){
+    Serial.println(sqweezeDvdt[2]);
+    if (sqweezeDvdt[2] > 15){
       sqweezeForceSet[2] = as2S.smooth(analogRead(A10))-sqweezeForceCal[2];
+      sqweezeForceSet[1] = 0;
+      sqweezeForceSet[0] = 0;
       printForceValuesS2();
-    } else if (sqweezeDvdt[2] < 0) {
-      printForceValuesSetS2();
+    } else if (sqweezeDvdt[2] <= 4) {
+      printForceValuesSet();
     }
   }
 
   if (state == 2){
     pushDvdt[0] = voltageRate(0);
-    if (pushDvdt[0] > 1){
-      pushForceSet[0] = as0P.smooth(analogRead(A4)-pushForceCal[0]);
+    Serial.println(pushDvdt[0]);
+    if (pushDvdt[0] > 15){
+      readForceSet();
       printForceValues0();
-    } else if (pushDvdt[0] <= 0) {
-      printForceValuesSet0();
+    } else if (pushDvdt[0] <= 4) {
+      printForceValuesSet();
     }
     pushDvdt[1] = voltageRate(1);
-    if (pushDvdt[1] > 1){
-      pushForceSet[1] = as1P.smooth(analogRead(A9))-pushForceCal[1];
+    Serial.println(pushDvdt[1]);
+    if (pushDvdt[1] > 15){
+      readForceSet();
       printForceValues1();
-    } else if (pushDvdt[1] <= 0) {
-      printForceValuesSet1();
+    } else if (pushDvdt[1] <= 4) {
+      printForceValuesSet();
     }
     pushDvdt[2] = voltageRate(2);
-    if (pushDvdt[2] > 1){
-      pushForceSet[2] = as2P.smooth(analogRead(A11))-pushForceCal[2];
+    Serial.println(pushDvdt[2]);
+    if (pushDvdt[2] > 15){
+      readForceSet();
       printForceValues2();
-    } else if (pushDvdt[2] <= 0 ) {
-      printForceValuesSet2();
+    } else if (pushDvdt[2] <= 4) {
+      printForceValuesSet();
     }
   }
   delay(100);
@@ -183,6 +195,12 @@ void readForceSet(){
   pushForceSet[0] = as0P.smooth(analogRead(A4));
   pushForceSet[1] = as1P.smooth(analogRead(A9));
   pushForceSet[2] = as2P.smooth(analogRead(A11));
+}
+
+void readForceSetS(){
+  sqweezeForce[0] = as0S.smooth(analogRead(A3))-sqweezeForceCal[0];
+  sqweezeForce[1] = as0S.smooth(analogRead(A5))-sqweezeForceCal[1];
+  sqweezeForce[2] = as0S.smooth(analogRead(A10))-sqweezeForceCal[2];
 }
 
 void printForceValues0(){
@@ -330,9 +348,9 @@ void switchMode(int mode){
       rotate(-2200, 1, X_DIR_PIN, X_STEP_PIN);
     }
     if (mode == 2){
-      rotate(1000, 1, e0_DIR_PIN, e0_STEP_PIN);
-      rotate(1000, 1, e1_DIR_PIN, e1_STEP_PIN);
-      rotate(1000, 1, X_DIR_PIN, X_STEP_PIN);
+      rotate(700, 1, e0_DIR_PIN, e0_STEP_PIN);
+      rotate(700, 1, e1_DIR_PIN, e1_STEP_PIN);
+      rotate(900, 1, X_DIR_PIN, X_STEP_PIN);
     }
   }
   if (state == 2){
@@ -341,9 +359,9 @@ void switchMode(int mode){
       switchMode(0);
     }
     if (mode == 1){
-      rotate(-1000, 1, e0_DIR_PIN, e0_STEP_PIN);
-      rotate(-1000, 1, e1_DIR_PIN, e1_STEP_PIN);
-      rotate(-1000, 1, X_DIR_PIN, X_STEP_PIN);
+      rotate(-700, 1, e0_DIR_PIN, e0_STEP_PIN);
+      rotate(-700, 1, e1_DIR_PIN, e1_STEP_PIN);
+      rotate(-900, 1, X_DIR_PIN, X_STEP_PIN);
     }
   }
   state = mode;
@@ -486,4 +504,8 @@ float voltageRate(int v_SensorValue){
     // }
     return dvdt*100000;
   }
+}
+
+float map(float value, float istart, float istop, float ostart, float ostop) {
+  return ostart + (ostop - ostart) * ((value - istart) / (istop - istart));
 }
