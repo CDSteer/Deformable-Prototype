@@ -23,12 +23,9 @@ unsigned long lastTime[3];
 unsigned long lastTimeS[3];
 unsigned long speedLastTime = 0;
 unsigned long dt = 100; // dt in milliseconds
-
 float speed_dvdt = 0;
-
 float sqweezeDvdt[3];
 float pushDvdt[3];
-
 float sqweezeForce[3];
 float pushForce[3];
 float sqweezeForceCal[3];
@@ -41,27 +38,21 @@ int mPos = 1300;
 int lPos = 0;
 int state = 1;
 bool stop = false;
-
 int h1State = 1;
 int h2State = 1;
 int h3State = 1;
-
 float pushForceSet[3];
 float sqweezeForceSet[3];
-
 bool grasp = false;
-
 static const uint8_t analog_pins[] = {A3, A4, A5, A9, A10, A11};
 
 // Defaults to window size 10
 AnalogSmooth as0S = AnalogSmooth();
 AnalogSmooth as1S = AnalogSmooth();
 AnalogSmooth as2S = AnalogSmooth();
-
 AnalogSmooth as0P = AnalogSmooth();
 AnalogSmooth as1P = AnalogSmooth();
 AnalogSmooth as2P = AnalogSmooth();
-
 // Window size can range from 1 - 100
 AnalogSmooth as100 = AnalogSmooth(100);
 
@@ -123,12 +114,12 @@ void loop () {
   if (state == 0){
     sqweezeDvdt[0] = voltageRateSqweeze(0);
     Serial.println(sqweezeDvdt[0]);
-    if (sqweezeDvdt[0] > 15){
+    if  (sqweezeDvdt[0] > 15){
       sqweezeForceSet[0] = as0S.smooth(analogRead(A3))-sqweezeForceCal[0];
       sqweezeForceSet[1] = 0;
       sqweezeForceSet[2] = 0;
       printForceValuesS0();
-    } else if (sqweezeDvdt[0] <= 4 ) {
+    } else if (sqweezeDvdt[0] <= 4) {
       printForceValuesSet();
     }
     sqweezeDvdt[1] = voltageRateSqweeze(1);
